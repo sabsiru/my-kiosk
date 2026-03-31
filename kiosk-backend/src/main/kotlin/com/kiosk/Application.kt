@@ -18,7 +18,6 @@ import io.ktor.server.websocket.*
 import org.koin.ktor.ext.inject
 import java.io.File
 import java.time.Duration
-import kotlinx.serialization.Serializable
 
 fun main(args: Array<String>): Unit = EngineMain.main(args)
 
@@ -39,7 +38,6 @@ fun Application.module() {
     }
 
     routing {
-        // 정적 파일 서빙 (이미지 업로드)
         staticFiles("/static/uploads", File("uploads"))
 
         // 키오스크 API (storeId 쿼리 파라미터로 TenantContext 설정)
@@ -55,24 +53,14 @@ fun Application.module() {
             orderRoutes()
             paymentRoutes()
 
-            // 키오스크용 테이블 목록 조회
             val tableUseCase by inject<TableUseCase>()
             get("/tables") {
-                val tables = tableUseCase.getTables()
-                call.respond(tables.map {
-                    KioskTableResponse(id = it.id, tableNumber = it.tableNumber, status = it.status.name)
-                })
+                call.respond(tableUseCase.getTables().map { it.toKioskResponse() })
             }
 
-            // 키오스크용 매장 정보 조회
             val storeUseCase by inject<StoreUseCase>()
             get("/store") {
-                val store = storeUseCase.getStore()
-                call.respond(KioskStoreResponse(
-                    id = store.id, name = store.name,
-                    openTime = store.openTime.toString(), closeTime = store.closeTime.toString(),
-                    isOpen = store.isOpen, hideAdminButton = store.hideAdminButton
-                ))
+                call.respond(storeUseCase.getStore().toKioskResponse())
             }
         }
         adminRoutes()
@@ -81,9 +69,3 @@ fun Application.module() {
         syncWebSocket()
     }
 }
-
-@Serializable
-data class KioskTableResponse(val id: Long, val tableNumber: Int, val status: String)
-
-@Serializable
-data class KioskStoreResponse(val id: Long, val name: String, val openTime: String, val closeTime: String, val isOpen: Boolean, val hideAdminButton: Boolean)
