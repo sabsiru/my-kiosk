@@ -4,8 +4,11 @@ import com.kiosk.domain.model.*
 import com.kiosk.domain.repository.OrderRepository
 import com.kiosk.domain.repository.PaymentRepository
 import com.kiosk.domain.repository.TableRepository
+import com.kiosk.infrastructure.db.TenantContext
 import com.kiosk.websocket.SyncEvent
 import com.kiosk.websocket.SyncManager
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class TableUseCase(
     private val tableRepository: TableRepository,
@@ -77,8 +80,10 @@ class TableUseCase(
         tableRepository.updateStatus(id, TableStatus.AVAILABLE)
 
         // WebSocket 브로드캐스트: 테이블 결제 완료
-        SyncManager.broadcastToKiosks(SyncEvent("TABLE_CHECKOUT", """{"tableId":$id}"""))
-        SyncManager.broadcastToKitchen(SyncEvent("TABLE_CHECKOUT", """{"tableId":$id}"""))
+        val storeId = TenantContext.get()
+        val eventData = Json.encodeToString(mapOf("tableId" to id.toString()))
+        SyncManager.broadcastToKiosks(storeId, SyncEvent("TABLE_CHECKOUT", eventData))
+        SyncManager.broadcastToKitchen(storeId, SyncEvent("TABLE_CHECKOUT", eventData))
 
         return payments
     }
