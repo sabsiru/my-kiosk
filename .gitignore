@@ -1,0 +1,8 @@
+.claude/
+CLAUDE.md
+
+# Build
+kiosk-backend/.gradle/
+kiosk-backend/build/
+kiosk-app/.dart_tool/
+kiosk-app/build/
