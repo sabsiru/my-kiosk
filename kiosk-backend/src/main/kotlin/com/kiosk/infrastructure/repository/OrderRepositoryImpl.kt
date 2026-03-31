@@ -82,11 +82,7 @@ class OrderRepositoryImpl : OrderRepository {
             .limit(limit, offset.toLong())
             .map { it.toOrder() }
 
-        orders.map { order ->
-            val items = OrderItemTable.select { OrderItemTable.orderId eq order.id }
-                .map { it.toOrderItem() }
-            OrderWithItems(order, items)
-        }
+        assembleOrdersWithItems(orders)
     }
 
     override suspend fun updateStatus(id: Long, status: OrderStatus): Boolean = dbQuery {
@@ -107,11 +103,7 @@ class OrderRepositoryImpl : OrderRepository {
             .orderBy(OrderTable.createdAt, SortOrder.ASC)
             .map { it.toOrder() }
 
-        orders.map { order ->
-            val items = OrderItemTable.select { OrderItemTable.orderId eq order.id }
-                .map { it.toOrderItem() }
-            OrderWithItems(order, items)
-        }
+        assembleOrdersWithItems(orders)
     }
 
     override suspend fun countByDateRange(from: LocalDate, to: LocalDate): Int = dbQuery {
@@ -119,6 +111,20 @@ class OrderRepositoryImpl : OrderRepository {
             (OrderTable.createdAt greaterEq from.atStartOfDay()) and
             (OrderTable.createdAt less to.plusDays(1).atStartOfDay())
         }.count().toInt()
+    }
+
+    /** 주문 목록에 대해 items를 한 번의 쿼리로 일괄 조회 (N+1 방지) */
+    private fun assembleOrdersWithItems(orders: List<Order>): List<OrderWithItems> {
+        if (orders.isEmpty()) return emptyList()
+
+        val orderIds = orders.map { it.id }
+        val allItems = OrderItemTable.select { OrderItemTable.orderId inList orderIds }
+            .map { it.toOrderItem() }
+        val itemsByOrderId = allItems.groupBy { it.orderId }
+
+        return orders.map { order ->
+            OrderWithItems(order, itemsByOrderId[order.id] ?: emptyList())
+        }
     }
 
     private fun ResultRow.toOrder() = Order(
