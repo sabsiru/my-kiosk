@@ -4,8 +4,11 @@ import com.kiosk.domain.model.*
 import com.kiosk.domain.repository.MenuRepository
 import com.kiosk.domain.repository.OrderRepository
 import com.kiosk.domain.repository.TableRepository
+import com.kiosk.infrastructure.db.TenantContext
 import com.kiosk.websocket.SyncEvent
 import com.kiosk.websocket.SyncManager
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -57,7 +60,8 @@ class OrderUseCase(
         }
 
         // WebSocket 브로드캐스트: 주방에 신규 주문 알림
-        SyncManager.broadcastToKitchen(SyncEvent("NEW_ORDER", """{"orderNumber":"${result.order.orderNumber}"}"""))
+        val storeId = TenantContext.get()
+        SyncManager.broadcastToKitchen(storeId, SyncEvent("NEW_ORDER", Json.encodeToString(mapOf("orderNumber" to result.order.orderNumber))))
 
         return result
     }
@@ -86,8 +90,10 @@ class OrderUseCase(
         val result = orderRepository.updateStatus(id, status)
 
         // WebSocket 브로드캐스트: 주문 상태 변경 알림
-        SyncManager.broadcastToKitchen(SyncEvent("ORDER_STATUS_CHANGED", """{"orderId":$id,"status":"${status.name}"}"""))
-        SyncManager.broadcastOrderStatus(SyncEvent("ORDER_STATUS_CHANGED", """{"orderId":$id,"status":"${status.name}"}"""))
+        val storeId = TenantContext.get()
+        val eventData = Json.encodeToString(mapOf("orderId" to id.toString(), "status" to status.name))
+        SyncManager.broadcastToKitchen(storeId, SyncEvent("ORDER_STATUS_CHANGED", eventData))
+        SyncManager.broadcastOrderStatus(storeId, SyncEvent("ORDER_STATUS_CHANGED", eventData))
 
         return result
     }
