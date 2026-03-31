@@ -7,79 +7,92 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-object SyncManager {
-    private val kioskConnections = ConcurrentHashMap<String, WebSocketServerSession>()
-    private val kitchenConnections = ConcurrentHashMap<String, WebSocketServerSession>()
-    private val orderStatusConnections = ConcurrentHashMap<String, WebSocketServerSession>()
+private data class StoreConnection(val storeId: Long, val session: WebSocketServerSession)
 
-    fun addKioskConnection(id: String, session: WebSocketServerSession) {
-        kioskConnections[id] = session
+object SyncManager {
+    private val logger = LoggerFactory.getLogger(SyncManager::class.java)
+
+    private val kioskConnections = ConcurrentHashMap<String, StoreConnection>()
+    private val kitchenConnections = ConcurrentHashMap<String, StoreConnection>()
+    private val orderStatusConnections = ConcurrentHashMap<String, StoreConnection>()
+
+    fun addKioskConnection(id: String, storeId: Long, session: WebSocketServerSession) {
+        kioskConnections[id] = StoreConnection(storeId, session)
     }
 
     fun removeKioskConnection(id: String) {
         kioskConnections.remove(id)
     }
 
-    fun addKitchenConnection(id: String, session: WebSocketServerSession) {
-        kitchenConnections[id] = session
+    fun addKitchenConnection(id: String, storeId: Long, session: WebSocketServerSession) {
+        kitchenConnections[id] = StoreConnection(storeId, session)
     }
 
     fun removeKitchenConnection(id: String) {
         kitchenConnections.remove(id)
     }
 
-    fun addOrderStatusConnection(id: String, session: WebSocketServerSession) {
-        orderStatusConnections[id] = session
+    fun addOrderStatusConnection(id: String, storeId: Long, session: WebSocketServerSession) {
+        orderStatusConnections[id] = StoreConnection(storeId, session)
     }
 
     fun removeOrderStatusConnection(id: String) {
         orderStatusConnections.remove(id)
     }
 
-    suspend fun broadcastToKiosks(event: SyncEvent) {
-        val message = Json.encodeToString(event)
-        kioskConnections.values.forEach { session ->
-            try {
-                session.send(Frame.Text(message))
-            } catch (_: Exception) {}
-        }
+    suspend fun broadcastToKiosks(storeId: Long, event: SyncEvent) {
+        broadcast(kioskConnections, storeId, event)
     }
 
-    suspend fun broadcastToKitchen(event: SyncEvent) {
-        val message = Json.encodeToString(event)
-        kitchenConnections.values.forEach { session ->
-            try {
-                session.send(Frame.Text(message))
-            } catch (_: Exception) {}
-        }
+    suspend fun broadcastToKitchen(storeId: Long, event: SyncEvent) {
+        broadcast(kitchenConnections, storeId, event)
     }
 
-    suspend fun broadcastOrderStatus(event: SyncEvent) {
+    suspend fun broadcastOrderStatus(storeId: Long, event: SyncEvent) {
+        broadcast(orderStatusConnections, storeId, event)
+    }
+
+    private suspend fun broadcast(
+        connections: ConcurrentHashMap<String, StoreConnection>,
+        storeId: Long,
+        event: SyncEvent
+    ) {
         val message = Json.encodeToString(event)
-        orderStatusConnections.values.forEach { session ->
-            try {
-                session.send(Frame.Text(message))
-            } catch (_: Exception) {}
+        val deadConnections = mutableListOf<String>()
+
+        connections.forEach { (id, conn) ->
+            if (conn.storeId == storeId) {
+                try {
+                    conn.session.send(Frame.Text(message))
+                } catch (e: Exception) {
+                    logger.warn("WebSocket broadcast 실패 (connectionId=$id, storeId=$storeId): ${e.message}")
+                    deadConnections.add(id)
+                }
+            }
         }
+
+        deadConnections.forEach { connections.remove(it) }
     }
 }
 
 @Serializable
 data class SyncEvent(
-    val type: String,  // MENU_UPDATED, SOLD_OUT_CHANGED, STORE_UPDATED, NEW_ORDER, ORDER_STATUS_CHANGED
-    val data: String   // JSON payload
+    val type: String,
+    val data: String
 )
 
 fun Route.syncWebSocket() {
     webSocket("/ws/sync") {
+        val storeId = call.request.queryParameters["storeId"]?.toLongOrNull() ?: return@webSocket close(
+            CloseReason(CloseReason.Codes.VIOLATED_POLICY, "storeId required")
+        )
         val connectionId = java.util.UUID.randomUUID().toString()
-        SyncManager.addKioskConnection(connectionId, this)
+        SyncManager.addKioskConnection(connectionId, storeId, this)
         try {
-            for (frame in incoming) {
-                // 키오스크는 주로 수신만 함
-            }
+            for (frame in incoming) { /* 키오스크는 주로 수신만 */ }
         } catch (_: ClosedReceiveChannelException) {
         } finally {
             SyncManager.removeKioskConnection(connectionId)
@@ -87,12 +100,13 @@ fun Route.syncWebSocket() {
     }
 
     webSocket("/ws/kitchen") {
+        val storeId = call.request.queryParameters["storeId"]?.toLongOrNull() ?: return@webSocket close(
+            CloseReason(CloseReason.Codes.VIOLATED_POLICY, "storeId required")
+        )
         val connectionId = java.util.UUID.randomUUID().toString()
-        SyncManager.addKitchenConnection(connectionId, this)
+        SyncManager.addKitchenConnection(connectionId, storeId, this)
         try {
-            for (frame in incoming) {
-                // 주방도 주로 수신
-            }
+            for (frame in incoming) { /* 주방도 주로 수신 */ }
         } catch (_: ClosedReceiveChannelException) {
         } finally {
             SyncManager.removeKitchenConnection(connectionId)
@@ -100,12 +114,13 @@ fun Route.syncWebSocket() {
     }
 
     webSocket("/ws/order-status") {
+        val storeId = call.request.queryParameters["storeId"]?.toLongOrNull() ?: return@webSocket close(
+            CloseReason(CloseReason.Codes.VIOLATED_POLICY, "storeId required")
+        )
         val connectionId = java.util.UUID.randomUUID().toString()
-        SyncManager.addOrderStatusConnection(connectionId, this)
+        SyncManager.addOrderStatusConnection(connectionId, storeId, this)
         try {
-            for (frame in incoming) {
-                // 주문 상태 수신
-            }
+            for (frame in incoming) { /* 주문 상태 수신 */ }
         } catch (_: ClosedReceiveChannelException) {
         } finally {
             SyncManager.removeOrderStatusConnection(connectionId)
