@@ -1,6 +1,7 @@
 package com.kiosk.routes
 
 import com.kiosk.application.OrderUseCase
+import com.kiosk.domain.model.AppException
 import com.kiosk.domain.model.OrderStatus
 import com.kiosk.infrastructure.db.TenantContext
 import io.ktor.http.*
@@ -15,21 +16,20 @@ fun Route.kitchenRoutes() {
 
     route("/api/v1/kitchen") {
         intercept(ApplicationCallPipeline.Call) {
-            val storeId = call.request.queryParameters["storeId"]?.toLongOrNull()
-                ?: return@intercept call.respond(HttpStatusCode.BadRequest, "storeId is required")
+            val storeId = call.queryLong("storeId")
+                ?: throw AppException.BadRequest("storeId is required")
             if (TenantContext.getOrNull() == null) TenantContext.set(storeId)
         }
 
         get("/orders") {
             val orders = orderUseCase.getActiveKitchenOrders()
-            call.respond(orders.map { it.toOrderResponse() })
+            call.respond(orders.map { it.toResponse() })
         }
 
         put("/orders/{id}/status") {
-            val id = call.parameters["id"]?.toLongOrNull()
-                ?: return@put call.respond(HttpStatusCode.BadRequest, "잘못된 ID")
+            val id = call.pathId()
             val request = call.receive<UpdateStatusRequest>()
-            val status = OrderStatus.valueOf(request.status)
+            val status = parseEnum<OrderStatus>(request.status, "주문 상태")
             orderUseCase.updateOrderStatus(id, status)
             call.respond(HttpStatusCode.OK)
         }
