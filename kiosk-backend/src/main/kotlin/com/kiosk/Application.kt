@@ -37,6 +37,11 @@ fun Application.module() {
         masking = false
     }
 
+    // 모든 요청 후 TenantContext 정리
+    intercept(ApplicationCallPipeline.Fallback) {
+        TenantContext.clear()
+    }
+
     routing {
         staticFiles("/static/uploads", File("uploads"))
 
