@@ -1,13 +1,15 @@
 package com.kiosk.application
 
 import com.kiosk.domain.model.*
+import com.kiosk.domain.repository.CategoryRepository
 import com.kiosk.domain.repository.MenuRepository
 import com.kiosk.domain.repository.OrderRepository
 import java.time.LocalDate
 
 class StatisticsUseCase(
     private val orderRepository: OrderRepository,
-    private val menuRepository: MenuRepository
+    private val menuRepository: MenuRepository,
+    private val categoryRepository: CategoryRepository
 ) {
     suspend fun getMenuSales(from: LocalDate, to: LocalDate): List<MenuSalesStatistic> {
         val orders = orderRepository.findAll(
@@ -16,8 +18,8 @@ class StatisticsUseCase(
             limit = Int.MAX_VALUE
         ).filter { it.order.status != OrderStatus.CANCELLED }
 
-        val categories = menuRepository.findAllCategories().associateBy { it.id }
-        val allMenus = menuRepository.findAllMenus().associateBy { it.id }
+        val categories = categoryRepository.findAll().associateBy { it.id }
+        val allMenus = menuRepository.findAll().associateBy { it.id }
 
         val menuSales = mutableMapOf<Long, Triple<String, String, MutableList<OrderItem>>>()
         for (order in orders) {
@@ -84,8 +86,8 @@ class StatisticsUseCase(
             limit = Int.MAX_VALUE
         ).filter { it.order.status != OrderStatus.CANCELLED }
 
-        val categories = menuRepository.findAllCategories().associateBy { it.id }
-        val allMenus = menuRepository.findAllMenus().associateBy { it.id }
+        val categories = categoryRepository.findAll().associateBy { it.id }
+        val allMenus = menuRepository.findAll().associateBy { it.id }
         val categorySales = mutableMapOf<Long, Int>()
 
         for (order in orders) {

@@ -25,7 +25,7 @@ class OrderUseCase(
         if (items.isEmpty()) throw AppException.BadRequest("주문 항목이 비어있습니다")
 
         val orderItems = items.map { item ->
-            val menu = menuRepository.findMenuById(item.menuId)
+            val menu = menuRepository.findById(item.menuId)
                 ?: throw AppException.NotFound("메뉴를 찾을 수 없습니다: ${item.menuId}")
 
             if (menu.isSoldOut) throw AppException.BadRequest("품절된 메뉴입니다: ${menu.name}")

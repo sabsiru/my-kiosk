@@ -22,6 +22,7 @@ import java.time.LocalTime
 import java.util.UUID
 
 fun Route.adminRoutes() {
+    val categoryUseCase by inject<CategoryUseCase>()
     val menuUseCase by inject<MenuUseCase>()
     val orderUseCase by inject<OrderUseCase>()
     val adminUseCase by inject<AdminUseCase>()
@@ -60,7 +61,7 @@ fun Route.adminRoutes() {
 
                 // ─── 카테고리/메뉴 ─────────────────────────
                 get("/categories") {
-                    call.respond(menuUseCase.getCategories().map { it.toResponse() })
+                    call.respond(categoryUseCase.getCategories().map { it.toResponse() })
                 }
 
                 get("/categories/{id}/menus") {
@@ -69,18 +70,18 @@ fun Route.adminRoutes() {
 
                 post("/categories") {
                     val request = call.receive<CreateCategoryRequest>()
-                    val category = menuUseCase.createCategory(request.name, request.displayOrder)
+                    val category = categoryUseCase.createCategory(request.name, request.displayOrder)
                     call.respond(HttpStatusCode.Created, category.toResponse())
                 }
 
                 put("/categories/{id}") {
                     val request = call.receive<UpdateCategoryRequest>()
-                    val category = menuUseCase.updateCategory(call.pathId(), request.name, request.displayOrder)
+                    val category = categoryUseCase.updateCategory(call.pathId(), request.name, request.displayOrder)
                     call.respond(category.toResponse())
                 }
 
                 delete("/categories/{id}") {
-                    menuUseCase.deleteCategory(call.pathId())
+                    categoryUseCase.deleteCategory(call.pathId())
                     call.respond(HttpStatusCode.NoContent)
                 }
 

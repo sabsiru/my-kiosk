@@ -17,6 +17,8 @@ fun Application.configureDI() {
 
 val appModule = module {
     // Repositories
+    single<CategoryRepository> { CategoryRepositoryImpl() }
+    single<MenuOptionRepository> { MenuOptionRepositoryImpl() }
     single<MenuRepository> { MenuRepositoryImpl() }
     single<OrderRepository> { OrderRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }
@@ -27,12 +29,13 @@ val appModule = module {
     single<HqStoreRepository> { HqStoreRepositoryImpl() }
 
     // UseCases
-    single { MenuUseCase(get()) }
+    single { CategoryUseCase(get()) }
+    single { MenuUseCase(get(), get()) }
     single { OrderUseCase(get(), get(), get()) }
     single { PaymentUseCase(get(), get()) }
     single { TableUseCase(get(), get(), get()) }
     single { SettlementUseCase(get(), get(), get()) }
-    single { StatisticsUseCase(get(), get()) }
+    single { StatisticsUseCase(get(), get(), get()) }
     single { AdminUseCase(get()) }
     single { StoreUseCase(get(), get()) }
     single { HqUseCase(get()) }
