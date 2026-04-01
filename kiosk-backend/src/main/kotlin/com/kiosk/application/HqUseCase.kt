@@ -4,10 +4,13 @@ import com.kiosk.domain.model.AppException
 import com.kiosk.domain.model.HqStore
 import com.kiosk.domain.model.StoreStatus
 import com.kiosk.domain.repository.HqStoreRepository
-import com.kiosk.infrastructure.db.DatabaseFactory
+import com.kiosk.domain.repository.StoreDbRepository
 import java.time.LocalDateTime
 
-class HqUseCase(private val hqStoreRepository: HqStoreRepository) {
+class HqUseCase(
+    private val hqStoreRepository: HqStoreRepository,
+    private val storeDbRepository: StoreDbRepository
+) {
 
     suspend fun getStores(): List<HqStore> =
         hqStoreRepository.findAll()
@@ -17,7 +20,6 @@ class HqUseCase(private val hqStoreRepository: HqStoreRepository) {
             ?: throw AppException.NotFound("매장을 찾을 수 없습니다: $id")
 
     suspend fun createStore(name: String, code: String): HqStore {
-        // 1) 임시 dbName으로 생성 (auto-increment ID 확보)
         val store = hqStoreRepository.create(
             HqStore(
                 name = name,
@@ -28,12 +30,10 @@ class HqUseCase(private val hqStoreRepository: HqStoreRepository) {
             )
         )
 
-        // 2) auto-increment ID 기반 dbName으로 업데이트
         val dbName = "kiosk_store_${store.id}"
         val updated = hqStoreRepository.update(store.copy(dbName = dbName))
 
-        // 3) 매장 DB 스키마 생성
-        DatabaseFactory.createStoreDb(updated.id)
+        storeDbRepository.createStoreDb(updated.id)
 
         return updated
     }
