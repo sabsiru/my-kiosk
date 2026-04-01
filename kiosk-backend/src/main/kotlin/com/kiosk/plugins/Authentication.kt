@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import java.util.*
 
@@ -41,7 +42,13 @@ object JwtConfig {
                     } else null
                 }
                 challenge { _, _ ->
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("인증이 필요합니다"))
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(
+                        code = 401,
+                        error = "Unauthorized",
+                        message = "인증이 필요합니다",
+                        path = call.request.path(),
+                        timestamp = java.time.Instant.now().toString()
+                    ))
                 }
             }
         }
