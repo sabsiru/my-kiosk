@@ -24,6 +24,10 @@ object MenuTable : Table("menus") {
     val isActive = bool("is_active").default(true)
     val displayOrder = integer("display_order").default(0)
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        index(false, categoryId)
+    }
 }
 
 object MenuOptionTable : Table("menu_options") {
@@ -43,27 +47,44 @@ object MenuOptionItemTable : Table("menu_option_items") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object KioskTableTable : Table("kiosk_tables") {
+    val id = long("id").autoIncrement()
+    val tableNumber = integer("table_number").uniqueIndex()
+    val deviceId = varchar("device_id", 100).nullable()
+    val status = varchar("status", 20).default("AVAILABLE")
+    val isActive = bool("is_active").default(true)
+    override val primaryKey = PrimaryKey(id)
+}
+
 object OrderTable : Table("orders") {
     val id = long("id").autoIncrement()
     val orderNumber = varchar("order_number", 20).uniqueIndex()
-    val tableId = long("table_id").nullable()
+    val tableId = long("table_id").references(KioskTableTable.id).nullable()
     val status = varchar("status", 20).default("PENDING")
     val totalAmount = integer("total_amount")
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        index(false, status)
+    }
 }
 
 object OrderItemTable : Table("order_items") {
     val id = long("id").autoIncrement()
     val orderId = long("order_id").references(OrderTable.id)
-    val menuId = long("menu_id")
+    val menuId = long("menu_id").references(MenuTable.id)
     val menuName = varchar("menu_name", 200)
     val quantity = integer("quantity")
     val unitPrice = integer("unit_price")
     val totalPrice = integer("total_price")
     val selectedOptions = varchar("selected_options", 1000).default("")
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        index(false, menuId)
+    }
 }
 
 object PaymentTable : Table("payments") {
@@ -76,15 +97,10 @@ object PaymentTable : Table("payments") {
     val pgTransactionId = varchar("pg_transaction_id", 100).nullable()
     val createdAt = datetime("created_at")
     override val primaryKey = PrimaryKey(id)
-}
 
-object KioskTableTable : Table("kiosk_tables") {
-    val id = long("id").autoIncrement()
-    val tableNumber = integer("table_number").uniqueIndex()
-    val deviceId = varchar("device_id", 100).nullable()
-    val status = varchar("status", 20).default("AVAILABLE")
-    val isActive = bool("is_active").default(true)
-    override val primaryKey = PrimaryKey(id)
+    init {
+        index(false, status)
+    }
 }
 
 object SettlementTable : Table("settlements") {
