@@ -27,6 +27,7 @@ val appModule = module {
     single<AdminRepository> { AdminRepositoryImpl() }
     single<StoreRepository> { StoreRepositoryImpl() }
     single<HqStoreRepository> { HqStoreRepositoryImpl() }
+    single<StoreDbRepository> { StoreDbRepositoryImpl() }
 
     // UseCases
     single { CategoryUseCase(get()) }
@@ -38,5 +39,5 @@ val appModule = module {
     single { StatisticsUseCase(get(), get(), get()) }
     single { AdminUseCase(get()) }
     single { StoreUseCase(get(), get()) }
-    single { HqUseCase(get()) }
+    single { HqUseCase(get(), get()) }
 }
