@@ -19,7 +19,7 @@ val appModule = module {
     // Repositories
     single<CategoryRepository> { CategoryRepositoryImpl() }
     single<MenuOptionRepository> { MenuOptionRepositoryImpl() }
-    single<MenuRepository> { MenuRepositoryImpl(get()) }
+    single<MenuRepository> { MenuRepositoryImpl() }
     single<OrderRepository> { OrderRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }
     single<TableRepository> { TableRepositoryImpl() }

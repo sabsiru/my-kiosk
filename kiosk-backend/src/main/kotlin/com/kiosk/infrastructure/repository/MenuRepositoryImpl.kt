@@ -1,14 +1,11 @@
 package com.kiosk.infrastructure.repository
 
 import com.kiosk.domain.model.*
-import com.kiosk.domain.repository.MenuOptionRepository
 import com.kiosk.domain.repository.MenuRepository
 import com.kiosk.infrastructure.db.*
 import org.jetbrains.exposed.sql.*
 
-class MenuRepositoryImpl(
-    private val menuOptionRepository: MenuOptionRepository
-) : MenuRepository {
+class MenuRepositoryImpl : MenuRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T = storeDbQuery(block)
 
