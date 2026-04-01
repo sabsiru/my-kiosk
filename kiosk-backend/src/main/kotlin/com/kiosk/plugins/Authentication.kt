@@ -7,10 +7,16 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
+import org.slf4j.LoggerFactory
 import java.util.*
 
 object JwtConfig {
-    private val secret = System.getenv("JWT_SECRET") ?: "kiosk-dev-secret-key-change-in-production"
+    private val logger = LoggerFactory.getLogger(JwtConfig::class.java)
+
+    private val secret = System.getenv("JWT_SECRET") ?: run {
+        logger.warn("JWT_SECRET 환경변수 미설정 — 개발용 기본값 사용. 프로덕션에서는 반드시 설정하세요.")
+        "kiosk-dev-secret-key-change-in-production"
+    }
     private val issuer = "kiosk-backend"
     private val audience = "kiosk-admin"
     private val algorithm = Algorithm.HMAC256(secret)

@@ -1,20 +1,28 @@
 package com.kiosk.infrastructure.db
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.LocalTime
 
 object DatabaseFactory {
 
+    private val logger = LoggerFactory.getLogger(DatabaseFactory::class.java)
+
     private val mysqlHost = System.getenv("MYSQL_HOST") ?: "localhost"
     private val mysqlPort = System.getenv("MYSQL_PORT") ?: "13307"
     private val mysqlUser = System.getenv("MYSQL_USER") ?: "root"
-    private val mysqlPassword = System.getenv("MYSQL_PASSWORD") ?: "kiosk1234"
+    private val mysqlPassword = System.getenv("MYSQL_PASSWORD") ?: run {
+        logger.warn("MYSQL_PASSWORD 환경변수 미설정 — 개발용 기본값 사용")
+        "kiosk1234"
+    }
 
     private lateinit var hqDatabase: Database
     private val storeDataSources = mutableMapOf<String, Database>()
@@ -95,12 +103,20 @@ object DatabaseFactory {
             exec("CREATE DATABASE IF NOT EXISTS `$dbName` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
         }
 
-        return Database.connect(
-            url = "jdbc:mysql://$mysqlHost:$mysqlPort/$dbName?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul",
-            driver = "com.mysql.cj.jdbc.Driver",
-            user = mysqlUser,
+        val hikariConfig = HikariConfig().apply {
+            jdbcUrl = "jdbc:mysql://$mysqlHost:$mysqlPort/$dbName?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
+            driverClassName = "com.mysql.cj.jdbc.Driver"
+            username = mysqlUser
             password = mysqlPassword
-        )
+            maximumPoolSize = 10
+            minimumIdle = 2
+            idleTimeout = 600000     // 10분
+            connectionTimeout = 30000 // 30초
+            maxLifetime = 1800000    // 30분
+            poolName = "HikariPool-$dbName"
+        }
+
+        return Database.connect(HikariDataSource(hikariConfig))
     }
 
     private fun seedHqData() {
@@ -122,7 +138,7 @@ object DatabaseFactory {
                 val store1Id = HqStoreTable.insert {
                     it[name] = "쿠로치쿠 강남역점"
                     it[code] = "GANGNAM"
-                    it[dbName] = "kiosk_store_1"
+                    it[HqStoreTable.dbName] = "kiosk_store_1"
                     it[status] = "ACTIVE"
                     it[createdAt] = LocalDateTime.now()
                 }[HqStoreTable.id]
@@ -139,7 +155,7 @@ object DatabaseFactory {
                 val store2Id = HqStoreTable.insert {
                     it[name] = "쿠로치쿠 홍대입구점"
                     it[code] = "HONGDAE"
-                    it[dbName] = "kiosk_store_2"
+                    it[HqStoreTable.dbName] = "kiosk_store_2"
                     it[status] = "ACTIVE"
                     it[createdAt] = LocalDateTime.now()
                 }[HqStoreTable.id]
