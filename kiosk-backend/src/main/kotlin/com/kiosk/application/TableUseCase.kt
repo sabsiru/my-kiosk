@@ -6,6 +6,7 @@ import com.kiosk.domain.repository.PaymentRepository
 import com.kiosk.domain.repository.TableRepository
 import com.kiosk.infrastructure.db.TenantContext
 import com.kiosk.websocket.SyncEvent
+import com.kiosk.websocket.SyncEventType
 import com.kiosk.websocket.SyncManager
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -82,8 +83,8 @@ class TableUseCase(
         // WebSocket 브로드캐스트: 테이블 결제 완료
         val storeId = TenantContext.get()
         val eventData = Json.encodeToString(mapOf("tableId" to id.toString()))
-        SyncManager.broadcastToKiosks(storeId, SyncEvent("TABLE_CHECKOUT", eventData))
-        SyncManager.broadcastToKitchen(storeId, SyncEvent("TABLE_CHECKOUT", eventData))
+        SyncManager.broadcastToKiosks(storeId, SyncEvent(SyncEventType.TABLE_CHECKOUT, eventData))
+        SyncManager.broadcastToKitchen(storeId, SyncEvent(SyncEventType.TABLE_CHECKOUT, eventData))
 
         return payments
     }

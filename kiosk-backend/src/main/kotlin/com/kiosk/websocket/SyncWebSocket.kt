@@ -78,11 +78,21 @@ object SyncManager {
     }
 }
 
+enum class SyncEventType {
+    NEW_ORDER,
+    ORDER_STATUS_CHANGED,
+    TABLE_CHECKOUT,
+    MENU_UPDATED,
+    STORE_UPDATED
+}
+
 @Serializable
 data class SyncEvent(
     val type: String,
     val data: String
-)
+) {
+    constructor(type: SyncEventType, data: String) : this(type.name, data)
+}
 
 fun Route.syncWebSocket() {
     webSocket("/ws/sync") {
