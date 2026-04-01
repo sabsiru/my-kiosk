@@ -53,7 +53,8 @@ class PaymentUseCase(
         paymentRepository.updateStatus(paymentId, PaymentStatus.CANCELLED)
         orderRepository.updateStatus(payment.orderId, OrderStatus.CANCELLED)
 
-        return paymentRepository.findById(paymentId)!!
+        return paymentRepository.findById(paymentId)
+            .orNotFound("결제 정보를 조회할 수 없습니다")
     }
 
     suspend fun getPaymentStatus(paymentId: Long): Payment =

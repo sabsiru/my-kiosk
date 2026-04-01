@@ -32,7 +32,8 @@ class SettlementUseCase(
         var settlement = settlementRepository.findByDate(date)
         if (settlement == null) {
             recalculateForDate(date)
-            settlement = settlementRepository.findByDate(date)!!
+            settlement = settlementRepository.findByDate(date)
+                .orNotFound("정산 데이터를 생성할 수 없습니다")
         }
 
         if (settlement.isClosed) {
@@ -40,7 +41,8 @@ class SettlementUseCase(
         }
 
         settlementRepository.close(date)
-        return settlementRepository.findByDate(date)!!
+        return settlementRepository.findByDate(date)
+            .orNotFound("마감된 정산 데이터를 조회할 수 없습니다")
     }
 
     suspend fun recalculateForDate(date: LocalDate): Settlement {
