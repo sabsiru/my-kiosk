@@ -38,8 +38,9 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
-    // MySQL
+    // MySQL + Connection Pool
     implementation("mysql:mysql-connector-java:8.0.33")
+    implementation("com.zaxxer:HikariCP:5.1.0")
 
     // H2 (테스트용)
     implementation("com.h2database:h2:2.2.224")
