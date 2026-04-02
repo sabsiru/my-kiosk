@@ -38,7 +38,7 @@ object DatabaseFactory {
         // 1. 본사 DB 연결 + 스키마 생성
         hqDatabase = connectMysql("kiosk_hq")
         transaction(hqDatabase) {
-            SchemaUtils.create(HqStoreTable, HqAdminTable)
+            SchemaUtils.createMissingTablesAndColumns(HqStoreTable, HqAdminTable)
         }
 
         // 2. 시드 데이터 삽입

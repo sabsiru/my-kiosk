@@ -15,7 +15,7 @@ object CategoryTable : Table("categories") {
 
 object MenuTable : Table("menus") {
     val id = long("id").autoIncrement()
-    val categoryId = long("category_id").references(CategoryTable.id)
+    val categoryId = long("category_id")
     val name = varchar("name", 200)
     val description = varchar("description", 500).default("")
     val price = integer("price")
@@ -32,7 +32,7 @@ object MenuTable : Table("menus") {
 
 object MenuOptionTable : Table("menu_options") {
     val id = long("id").autoIncrement()
-    val menuId = long("menu_id").references(MenuTable.id)
+    val menuId = long("menu_id")
     val name = varchar("name", 100)
     val isRequired = bool("is_required").default(false)
     val maxSelection = integer("max_selection").default(1)
@@ -41,7 +41,7 @@ object MenuOptionTable : Table("menu_options") {
 
 object MenuOptionItemTable : Table("menu_option_items") {
     val id = long("id").autoIncrement()
-    val optionId = long("option_id").references(MenuOptionTable.id)
+    val optionId = long("option_id")
     val name = varchar("name", 100)
     val additionalPrice = integer("additional_price").default(0)
     override val primaryKey = PrimaryKey(id)
@@ -59,7 +59,7 @@ object KioskTableTable : Table("kiosk_tables") {
 object OrderTable : Table("orders") {
     val id = long("id").autoIncrement()
     val orderNumber = varchar("order_number", 20).uniqueIndex()
-    val tableId = long("table_id").references(KioskTableTable.id).nullable()
+    val tableId = long("table_id").nullable()
     val status = varchar("status", 20).default("PENDING")
     val totalAmount = integer("total_amount")
     val createdAt = datetime("created_at")
@@ -73,8 +73,8 @@ object OrderTable : Table("orders") {
 
 object OrderItemTable : Table("order_items") {
     val id = long("id").autoIncrement()
-    val orderId = long("order_id").references(OrderTable.id)
-    val menuId = long("menu_id").references(MenuTable.id)
+    val orderId = long("order_id")
+    val menuId = long("menu_id")
     val menuName = varchar("menu_name", 200)
     val quantity = integer("quantity")
     val unitPrice = integer("unit_price")
@@ -89,7 +89,7 @@ object OrderItemTable : Table("order_items") {
 
 object PaymentTable : Table("payments") {
     val id = long("id").autoIncrement()
-    val orderId = long("order_id").references(OrderTable.id)
+    val orderId = long("order_id")
     val method = varchar("method", 20)
     val amount = integer("amount")
     val status = varchar("status", 20).default("PENDING")
