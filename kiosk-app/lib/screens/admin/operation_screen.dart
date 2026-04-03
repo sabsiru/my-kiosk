@@ -202,68 +202,31 @@ class _OperatingViewState extends ConsumerState<_OperatingView> {
                 const SizedBox(height: 16),
                 Expanded(
                   child: tablesAsync.when(
-                    data: (tables) => GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        childAspectRatio: 1.0,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: tables.length,
-                      itemBuilder: (context, index) {
-                        final table = tables[index];
-                        final isOccupied = table.status == 'OCCUPIED';
-                        final isSelected = selectedTableId == table.id;
-                        return GestureDetector(
-                          onTap: () {
-                            ref.read(_selectedTableIdProvider.notifier).state =
-                                table.id;
-                          },
-                          child: Card(
-                            color: isSelected
-                                ? AppColors.adminAccent.withOpacity(0.15)
-                                : isOccupied
-                                    ? AppColors.warning.withOpacity(0.1)
-                                    : AppColors.surface,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? AppColors.adminAccent
-                                    : isOccupied
-                                        ? AppColors.warning
-                                        : AppColors.border,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.table_bar,
-                                      size: 32,
-                                      color: isOccupied
-                                          ? AppColors.warning
-                                          : AppColors.success),
-                                  const SizedBox(height: 8),
-                                  Text('${table.tableNumber}번',
-                                      style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    isOccupied ? '사용중' : '비어있음',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isOccupied
-                                          ? AppColors.warning
-                                          : AppColors.success,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                    data: (tables) => LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount = (constraints.maxWidth / 160).floor().clamp(2, 6);
+                        return GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
                           ),
+                          itemCount: tables.length,
+                          itemBuilder: (context, index) {
+                            final table = tables[index];
+                            final isOccupied = table.status == 'OCCUPIED';
+                            final isSelected = selectedTableId == table.id;
+                            return _TableCard(
+                              table: table,
+                              isOccupied: isOccupied,
+                              isSelected: isSelected,
+                              onTap: () {
+                                ref.read(_selectedTableIdProvider.notifier).state =
+                                    table.id;
+                              },
+                            );
+                          },
                         );
                       },
                     ),
@@ -499,6 +462,139 @@ class _TableOrderDetail extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+        );
+  }
+}
+
+class _TableCard extends ConsumerWidget {
+  final KioskTable table;
+  final bool isOccupied;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TableCard({
+    required this.table,
+    required this.isOccupied,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bgColor = isSelected
+        ? AppColors.adminAccent.withOpacity(0.15)
+        : isOccupied
+            ? const Color(0xFFFFF3E0) // 주황 계열 따뜻한 배경
+            : const Color(0xFFE8F5E9); // 초록 계열 배경
+    final borderColor = isSelected
+        ? AppColors.adminAccent
+        : isOccupied
+            ? AppColors.warning
+            : const Color(0xFF81C784);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        color: bgColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: borderColor, width: isSelected ? 2 : 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${table.tableNumber}번 테이블',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isOccupied
+                        ? AppColors.warning
+                        : const Color(0xFF388E3C),
+                  )),
+              const SizedBox(height: 4),
+              if (isOccupied) ...[
+                const Divider(height: 1),
+                const SizedBox(height: 4),
+                _TableOrderSummary(tableId: table.id),
+              ] else
+                const Expanded(
+                  child: Center(
+                    child: Icon(Icons.table_bar,
+                        size: 32, color: Color(0xFF81C784)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TableOrderSummary extends ConsumerWidget {
+  final int tableId;
+  const _TableOrderSummary({required this.tableId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(_tableOrdersProvider(tableId));
+
+    return ordersAsync.when(
+      data: (orders) {
+        final activeOrders = orders
+            .where((o) => o.status != 'PAID' && o.status != 'CANCELLED')
+            .toList();
+        if (activeOrders.isEmpty) {
+          return const Text('주문 없음',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary));
+        }
+        final totalAmount =
+            activeOrders.fold<int>(0, (sum, o) => sum + o.totalAmount);
+        // 모든 주문의 메뉴 항목을 합산
+        final menuSummary = <String, int>{};
+        for (final order in activeOrders) {
+          for (final item in order.items) {
+            menuSummary[item.menuName] =
+                (menuSummary[item.menuName] ?? 0) + item.quantity;
+          }
+        }
+        return Expanded(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: menuSummary.entries.map((e) => Text(
+                    '${e.key} x${e.value}',
+                    style: const TextStyle(fontSize: 14, height: 1.4),
+                    overflow: TextOverflow.ellipsis,
+                  )).toList(),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${_formatPrice(totalAmount)}원',
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox(
+          height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+      error: (_, __) => const Text('-', style: TextStyle(color: AppColors.error)),
     );
   }
 
