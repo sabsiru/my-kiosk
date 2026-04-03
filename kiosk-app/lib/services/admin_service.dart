@@ -21,6 +21,11 @@ class AdminService {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> getMe() async {
+    final response = await _dio.get('/admin/me');
+    return response.data as Map<String, dynamic>;
+  }
+
   // 카테고리/메뉴 조회 (키오스크 API 재사용)
   Future<List<Category>> getCategories() async {
     final response = await _dio.get('/admin/categories');

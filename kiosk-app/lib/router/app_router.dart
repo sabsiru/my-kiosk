@@ -34,6 +34,9 @@ GoRouter createAppRouter(WidgetRef ref) {
       final auth = ref.read(adminAuthProvider);
       final path = state.uri.toString();
 
+      // 초기화 완료 전에는 리다이렉트하지 않음
+      if (!auth.isInitialized) return null;
+
       // /admin/* 경로는 로그인 필요 (login 제외)
       if (path.startsWith('/admin') && path != '/admin/login') {
         if (!auth.isAuthenticated) {
